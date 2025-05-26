@@ -285,89 +285,7 @@ class BDD_Solver {
             dp[node] = result;
             return result;
         }
-        /*pair<__float128, __float128> cal_dp(DdNode* node) {
-            int idx = Cudd_NodeReadIndex(node);
 
-            // check if already calculated
-            auto it = dp.find(node);
-            if (it != dp.end()) {
-                return it->second;
-            }
-            else{
-                cout << "Node "<< idx << " not found in dp, calculating..." << endl;
-            }
-
-            DdNode* regular_node = Cudd_Regular(node);
-            DdNode* T = Cudd_T(regular_node);
-            DdNode* E = Cudd_E(regular_node);
-
-            if (Cudd_IsComplement(node)) {
-                T = Cudd_Not(T);
-                E = Cudd_Not(E);
-            }
-
-            pair<__float128, __float128> t_paths = cal_dp(T);
-            pair<__float128, __float128> e_paths = cal_dp(E);
-
-            pair<__float128, __float128> result;// 0: odd_cnt, 1: even_cnt
-            result.first = Cudd_IsComplement(node) ? t_paths.second + e_paths.second : t_paths.first + e_paths.first;
-            result.second = Cudd_IsComplement(node) ? t_paths.first + e_paths.first : t_paths.second + e_paths.second;
-
-            // for debug
-            char odd_buf[128], even_buf[128];
-            quadmath_snprintf(odd_buf, sizeof(odd_buf), "%.6Qg", result.first);
-            quadmath_snprintf(even_buf, sizeof(even_buf), "%.6Qg", result.second);
-            cout << "Calculating DP for node: " << idx;
-            cout << " Odd paths: " << odd_buf << ", Even paths: " << even_buf << endl;
-
-            dp[node] = result;
-            return result;
-        }*/
-
-        /*
-        bool dfs_generate_solution(DdNode* node, bool odd, vector<bool>& solution) {
-            if (Cudd_IsConstant(node)) {
-                // check if find a solution
-                if ((odd && node == Cudd_ReadOne(manager)) || 
-                    (!odd && node != Cudd_ReadOne(manager))) {
-                    return true; 
-                }
-                return false; 
-            }
-
-            // node without complementation
-            DdNode* regular_node = Cudd_Regular(node);
-            bool is_complemented = (regular_node != node);
-            int var_index = regular_node->index;
-
-            DdNode* T = Cudd_T(regular_node);
-            DdNode* E = Cudd_E(regular_node);
-
-            bool new_odd = is_complemented ? !odd : odd; 
-            bool odd_T = new_odd;
-            if (Cudd_IsComplement(T)) odd_T = !odd_T;
-
-            bool odd_E = new_odd;
-            if (Cudd_IsComplement(E)) odd_E = !odd_E;
-
-            __float128 cnt_T = odd_T ? dp[T].first : dp[T].second;
-            __float128 cnt_E = odd_E ? dp[E].first : dp[E].second;
-
-            double prob = 0.5;
-            prob = static_cast<double>(cnt_T) / static_cast<double>(cnt_T + cnt_E);
-            double rand = std::uniform_real_distribution<double>(0.0, 1.0)(rng);
-
-            bool success = false;
-            if (rand < prob) {
-                solution[var_index] = true;
-                success = dfs_generate_solution(T, odd_T, solution);
-            } else {
-                solution[var_index] = false;
-                success = dfs_generate_solution(E, odd_E, solution);
-            }
-
-            return success;
-        }*/
         bool dfs_generate_solution(DdNode* node, bool odd, vector<bool>& solution) {
             if (Cudd_IsConstant(node)) {
                 if ((odd && node == Cudd_ReadOne(manager)) || 
@@ -532,6 +450,7 @@ class BDD_Solver {
             return 0;
         }
 };
+
 
 int main(int argc, char** argv) {
     if (argc != 5) {

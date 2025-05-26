@@ -29,12 +29,12 @@ Peak number of live nodes: 75847
 Number of BDD variables: 62
 Number of ZDD variables: 0
 Number of cache entries: 262144
-Number of cache look-ups: 109382
-Number of cache hits: 42118
-Number of cache insertions: 67364
-Number of cache collisions: 4354
+Number of cache look-ups: 109403
+Number of cache hits: 42122
+Number of cache insertions: 67397
+Number of cache collisions: 7030
 Number of cache deletions: 0
-Cache used slots = 24.04% (expected 22.66%)
+Cache used slots = 23.03% (expected 22.67%)
 Soft limit for cache size: 149504
 Number of buckets in unique table: 37376
 Used buckets in unique table: 66.14% (expected 65.69%)
