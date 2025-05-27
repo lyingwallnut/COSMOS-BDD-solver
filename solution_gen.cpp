@@ -528,7 +528,7 @@ int main(int argc, char** argv) {
     // solve each split
     for(int q = 0 ; q < split_num ; q++){
         cout << "Processing split " << q << "..." << endl;
-        BDD_Solver solver(input_dir + "/split_" + to_string(q) + ".aag", 
+        BDD_Solver solver(input_dir + "/reordered_aags/reordered_" + to_string(q) + ".aag", 
                         input_dir + "/solution_" + to_string(q) + ".json", 
                         random_seed, solution_num);
 

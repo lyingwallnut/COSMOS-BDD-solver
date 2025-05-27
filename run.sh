@@ -69,17 +69,11 @@ echo "===== Step 1.5: 拆分 Verilog 文件 ====="
 splitv_start_time=$(date +%s)
 
 SPLIT_VERILOG_INPUT_FILE="$INITIAL_VERILOG_FILE"
-# split_verilog 现在直接输出到 $run_dir
 SPLIT_VERILOG_TARGET_DIR="$run_dir" # 输出目录就是运行目录
 
-# 执行拆分
 echo "拆分 Verilog 文件: $SPLIT_VERILOG_INPUT_FILE -> $SPLIT_VERILOG_TARGET_DIR (文件名为 split_N.v)"
-# 假设 split_verilog 的第二个参数仍然是输出目录，即使它现在与输入文件在同一目录
 "_run/split_verilog" "$SPLIT_VERILOG_INPUT_FILE" "$SPLIT_VERILOG_TARGET_DIR"
 
-# 统计拆分出的文件数量
-# 注意：这里我们假设 split_verilog 会创建 split_1.v, split_2.v 等文件
-# 并且我们依赖这些文件来确定拆分的份数
 num_split_files=$(ls -1 "$SPLIT_VERILOG_TARGET_DIR"/split_*.v 2>/dev/null | wc -l)
 
 if [ "$num_split_files" -eq 0 ]; then
@@ -88,26 +82,23 @@ if [ "$num_split_files" -eq 0 ]; then
 fi
 echo "✔ Verilog 文件已拆分为 $num_split_files 份 (例如: split_0.v, ...)"
 
-# 记录Verilog拆分结束时间
 splitv_end_time=$(date +%s)
 splitv_runtime=$((splitv_end_time - splitv_start_time))
 
 echo "===== Step 2: Verilog → AAG ====="
-# 记录Verilog到AAG转换开始时间
 v2aag_start_time=$(date +%s)
-
-AAG_OUTPUT_DIR="$run_dir"
+AAG_OUTPUT_DIR="$run_dir" # AAG 文件也输出到运行目录
 
 for i in $(seq 0 $(($num_split_files - 1))); do
     split_v_file="$SPLIT_VERILOG_TARGET_DIR/split_${i}.v"
-    split_aag_file="$AAG_OUTPUT_DIR/split_${i}.aag"
+    original_aag_file="$AAG_OUTPUT_DIR/split_${i}.aag" # 存储原始AAG文件名
     
     if [ ! -f "$split_v_file" ]; then
         echo "❌ 错误: 未找到拆分的 Verilog 文件 $split_v_file"
         exit 1
     fi
 
-    echo "转换 $split_v_file → $split_aag_file"
+    echo "转换 $split_v_file → $original_aag_file"
     YOSYS_SCRIPT_PART="read_verilog $split_v_file
 hierarchy -check
 opt
@@ -116,66 +107,101 @@ techmap
 opt
 aigmap
 opt
-write_aiger -symbols -ascii $split_aag_file
+abc -g AND
+write_aiger -symbols -ascii $original_aag_file
 exit"
     echo "$YOSYS_SCRIPT_PART" | ./yosys/yosys -q > "$run_dir/yosys_split_${i}.log" 2>&1
 
-    if [ ! -f "$split_aag_file" ]; then
-        echo "❌ 错误: AAG 文件 $split_aag_file 未生成"
+    if [ ! -f "$original_aag_file" ]; then
+        echo "❌ 错误: AAG 文件 $original_aag_file 未生成"
         echo "详情请查看: $run_dir/yosys_split_${i}.log"
         exit 1
     fi
 done
-
-# 记录Verilog到AAG转换结束时间
 v2aag_end_time=$(date +%s)
 v2aag_runtime=$((v2aag_end_time - v2aag_start_time))
-echo "✔ 所有拆分的 Verilog 文件已转换为 AAG 文件 (共 $num_split_files 个)"
+echo "✔ 所有拆分的 Verilog 文件已转换为原始 AAG 文件 (共 $num_split_files 个)"
+
+
+echo "===== Step 2.5: 重排 AAG 文件顺序 ====="
+# 记录AAG重排开始时间
+reorder_aag_start_time=$(date +%s)
+
+# 创建一个子目录来存放重排后的AAG文件，以避免与原始AAG文件混淆（可选，但推荐）
+REORDERED_AAG_DIR="$run_dir/reordered_aags"
+mkdir -p "$REORDERED_AAG_DIR"
+
+for i in $(seq 0 $(($num_split_files - 1))); do
+    original_aag_file="$AAG_OUTPUT_DIR/split_${i}.aag"
+    reordered_aag_file="$REORDERED_AAG_DIR/reordered_${i}.aag" # 重排后的文件名和路径
+
+    if [ ! -f "$original_aag_file" ]; then
+        echo "❌ 错误: 未找到用于重排的原始 AAG 文件 $original_aag_file"
+        exit 1
+    fi
+
+    echo "重排 AAG 文件: $original_aag_file → $reordered_aag_file"
+    python3 ./reorder_aag_rcm.py "$original_aag_file" "$reordered_aag_file" > "$run_dir/reorder_aag_${i}.log" 2>&1
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ 错误: AAG 文件 $original_aag_file 重排失败。"
+        echo "详情请查看: $run_dir/reorder_aag_${i}.log"
+        # 可以选择是否在这里退出，或者允许继续处理其他文件
+        # exit 1 
+    fi
+
+    if [ ! -f "$reordered_aag_file" ]; then
+        echo "❌ 错误: 重排后的 AAG 文件 $reordered_aag_file 未生成。"
+        echo "详情请查看: $run_dir/reorder_aag_${i}.log"
+        # exit 1
+    fi
+done
+
+# 记录AAG重排结束时间
+reorder_aag_end_time=$(date +%s)
+reorder_aag_runtime=$((reorder_aag_end_time - reorder_aag_start_time))
+echo "✔ 所有原始 AAG 文件已尝试重排 (共 $num_split_files 个)，输出到 $REORDERED_AAG_DIR"
+
 
 echo "===== Step 3: 运行 BDD 求解器 ====="
 # 参数准备
-# input_dir: 包含 split_N.aag 文件的目录，即 $AAG_OUTPUT_DIR (也就是 $run_dir)
-SOLUTION_GEN_INPUT_DIR="$AAG_OUTPUT_DIR" 
+# input_dir 现在指向包含 reordered_N.aag 文件的目录
+SOLUTION_GEN_INPUT_DIR="$REORDERED_AAG_DIR" # <--- 修改这里
 
 OUTPUT_JSON_FILE="$run_dir/result.json"
-# split_num: $num_split_files (之前计算得到的拆分文件总数)
-SOLUTION_GEN_SPLIT_COUNT="$num_split_files"
+SOLUTION_GEN_SPLIT_COUNT="$num_split_files" # 拆分数量保持不变
 
 echo "运行 solution_gen 生成解..."
+# 注意：solution_gen 现在需要能够从 $REORDERED_AAG_DIR 读取 reordered_0.aag, reordered_1.aag 等文件
 echo "命令: _run/solution_gen \"$SOLUTION_GEN_INPUT_DIR\" \"$seed\" \"$solution_num\" \"$OUTPUT_JSON_FILE\" \"$SOLUTION_GEN_SPLIT_COUNT\""
 
-# 记录BDD求解开始时间
 bdd_start_time=$(date +%s)
 
-# 运行求解器，并将输出记录到日志文件
-"_run/solution_gen" "$SOLUTION_GEN_INPUT_DIR" "$seed" "$solution_num" "$OUTPUT_JSON_FILE" "$SOLUTION_GEN_SPLIT_COUNT" > "$run_dir/solver.log" 2>&1
+"_run/solution_gen" "$run_dir" "$seed" "$solution_num" "$OUTPUT_JSON_FILE" "$SOLUTION_GEN_SPLIT_COUNT" > "$run_dir/solver.log" 2>&1
 
 if [ $? -ne 0 ]; then
     echo "❌ 解生成失败，请查看日志: $run_dir/solver.log"
     exit 1
 fi
 
-# 记录BDD求解结束时间和运行时间
 bdd_end_time=$(date +%s)
 bdd_runtime=$((bdd_end_time - bdd_start_time))
 
-# 记录整体结束时间和总运行时间
 total_end_time=$(date +%s)
 total_runtime=$((total_end_time - total_start_time))
 
-# 将各阶段运行时间写入文件
 {
     echo "编译时间: $build_runtime 秒"
     echo "JSON到Verilog转换时间: $json2v_runtime 秒"
-    echo "Verilog文件拆分时间: $splitv_runtime 秒" # 确保这一行已添加
+    echo "Verilog文件拆分时间: $splitv_runtime 秒"
     echo "Verilog到AAG转换时间: $v2aag_runtime 秒"
+    echo "AAG文件重排时间: $reorder_aag_runtime 秒" # 添加重排时间
     echo "BDD求解时间: $bdd_runtime 秒"
     echo "总运行时间: $total_runtime 秒"
 } > "$run_dir/time_log.txt"
 
-# 检查结果文件是否存在
 if [ ! -f "$OUTPUT_JSON_FILE" ]; then
-    echo "❌ 错误: 结果文件未生成: $OUTPUT"
+    echo "❌ 错误: 结果文件未生成: $OUTPUT_JSON_FILE" # 使用正确的变量名
     exit 1
 fi
 
