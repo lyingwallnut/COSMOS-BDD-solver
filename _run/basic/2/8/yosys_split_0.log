@@ -1,0 +1,22 @@
+
+yosys> read_verilog _run/basic/2/8/split_0.v
+
+yosys> hierarchy -check
+
+yosys> opt
+
+yosys> proc
+
+yosys> techmap
+
+yosys> opt
+
+yosys> aigmap
+
+yosys> opt
+
+yosys> abc -g AND
+
+yosys> write_aiger -symbols -ascii _run/basic/2/8/split_0.aag
+
+yosys> exit

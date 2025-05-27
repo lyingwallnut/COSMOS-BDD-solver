@@ -1,0 +1,45 @@
+module split_4(var_0, var_1, var_2, var_3, var_4, var_5, var_6, var_7, var_8, var_9, var_10, var_11, var_12, var_13, var_14, var_15, var_16, var_17, var_18, var_19, var_20, var_21, var_22, var_23, var_24, var_25, var_26, var_27, var_28, var_29, var_30, var_31, var_32, var_33, var_34, x);
+    input [14:0] var_0;
+    input [12:0] var_1;
+    input [14:0] var_2;
+    input [7:0] var_3;
+    input [5:0] var_4;
+    input [11:0] var_5;
+    input [5:0] var_6;
+    input [11:0] var_7;
+    input [9:0] var_8;
+    input [10:0] var_9;
+    input [10:0] var_10;
+    input [10:0] var_11;
+    input [9:0] var_12;
+    input [3:0] var_13;
+    input [12:0] var_14;
+    input [14:0] var_15;
+    input [11:0] var_16;
+    input [12:0] var_17;
+    input [6:0] var_18;
+    input [6:0] var_19;
+    input [15:0] var_20;
+    input [3:0] var_21;
+    input [5:0] var_22;
+    input [13:0] var_23;
+    input [13:0] var_24;
+    input [12:0] var_25;
+    input [12:0] var_26;
+    input [8:0] var_27;
+    input [10:0] var_28;
+    input [12:0] var_29;
+    input [6:0] var_30;
+    input [7:0] var_31;
+    input [5:0] var_32;
+    input [13:0] var_33;
+    input [8:0] var_34;
+    output wire x;
+
+    wire constraint_12, constraint_14, constraint_17;
+
+    assign constraint_12 = |((var_12 || var_14));
+    assign constraint_14 = |((var_14 - 16'h160));
+    assign constraint_17 = |(((!(var_14)) || var_23));
+    assign x = constraint_12 & constraint_14 & constraint_17;
+endmodule

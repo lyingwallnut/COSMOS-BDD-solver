@@ -134,6 +134,10 @@ class BDD_Solver {
             }
 
             aag_file >> max_idx >> input_num >> latch_num >> output_num >> and_num;
+            if(and_num == 0){
+                no_constraint = true; // if no ands, then no constraint
+            }
+
             
             if(input_num > 100){
                 Cudd_AutodynEnable(manager, CUDD_REORDER_SIFT);
@@ -159,9 +163,11 @@ class BDD_Solver {
             dp[Cudd_ReadOne(manager)] = {(__float128)0.0, (__float128)1.0};
             dp[Cudd_ReadLogicZero(manager)] = {(__float128)0.0, (__float128)0.0};
 
+
             // outputs(only 1 output)
             int output_idx;
             aag_file >> output_idx;
+
 
             // ands
             for(int i = 0 ; i < and_num ; i++){
@@ -186,6 +192,7 @@ class BDD_Solver {
                 nodes[out / 2 - 1] = Out;
             }
 
+
             // if output is a odd, then an additional inverter is needed
             if(!no_constraint){
                 out_node = output_idx % 2 == 0 ? nodes[output_idx / 2 - 1] : Cudd_Not(nodes[output_idx / 2 - 1]);
@@ -194,6 +201,7 @@ class BDD_Solver {
             else{
                 out_node = Cudd_ReadOne(manager); // if no constraint, output is always true
             }
+
 
 
             // names
@@ -222,6 +230,7 @@ class BDD_Solver {
                 idx_to_name[idx] = {x, y};
             }
 
+
             // for solution reshape in the last step
             ori_input_num = max(ori_input_num, 1);// original input number 
             idx_to_len.resize(ori_input_num, 0);// index to the length of each original input variable
@@ -235,17 +244,11 @@ class BDD_Solver {
                 }
             }
 
+
             // output names is not needed
             // done
             aag_file.close();   
 
-            // for debug
-            cout << "AAG to BDD conversion completed" << endl;
-            cout << "BDD infomations:" << endl;
-            Cudd_PrintInfo(manager, stdout); 
-            FILE* dot_file = fopen("./run_dir/bdd.dot", "w");
-            Cudd_DumpDot(manager, 1, &out_node, NULL, NULL, dot_file);
-            fclose(dot_file);
             return 0;
         }
 
@@ -257,7 +260,7 @@ class BDD_Solver {
             }
             
             int idx = Cudd_NodeReadIndex(node);
-            cout << "Node "<< idx << " not found in dp, calculating..." << endl;
+            //cout << "Node "<< idx << " not found in dp, calculating..." << endl;
 
             DdNode* regular_node = Cudd_Regular(node);
             DdNode* T = Cudd_T(regular_node);
@@ -285,11 +288,11 @@ class BDD_Solver {
                 swap(result.first, result.second);
             }
             
-            char odd_buf[128], even_buf[128];
-            quadmath_snprintf(odd_buf, sizeof(odd_buf), "%.6Qg", result.first);
-            quadmath_snprintf(even_buf, sizeof(even_buf), "%.6Qg", result.second);
-            cout << "Calculating DP for node: " << idx;
-            cout << " Odd paths: " << odd_buf << ", Even paths: " << even_buf << endl;
+            //char odd_buf[128], even_buf[128];
+            //quadmath_snprintf(odd_buf, sizeof(odd_buf), "%.6Qg", result.first);
+            //quadmath_snprintf(even_buf, sizeof(even_buf), "%.6Qg", result.second);
+            //cout << "Calculating DP for node: " << idx;
+            //cout << " Odd paths: " << odd_buf << ", Even paths: " << even_buf << endl;
             
             dp[node] = result;
             return result;
@@ -348,6 +351,12 @@ class BDD_Solver {
             }
 
             cal_dp(out_node);
+            char odd_buf[128], even_buf[128];
+            quadmath_snprintf(odd_buf, sizeof(odd_buf), "%.6Qg", dp[out_node].first);
+            quadmath_snprintf(even_buf, sizeof(even_buf), "%.6Qg", dp[out_node].second);
+            cout << "DP calculated for output node." << endl;
+            cout << " Odd paths: " << odd_buf << ", Even paths: " << even_buf << endl;
+
             
             const int MAX_ATTEMPTS = 100;
             
@@ -355,13 +364,10 @@ class BDD_Solver {
                 int attempts = 0;
                 bool success = false;
                 
+                bool seek_odd = (dp[out_node].first > 0);
                 while (attempts < MAX_ATTEMPTS && !success) {
                     attempts++;
-                    success = dfs_generate_solution(out_node, true, solutions[i]);
-                }
-                
-                if (!success) {
-                    cout << "Warning: Failed to generate valid solution #" << i+1 << " after " << MAX_ATTEMPTS << " attempts" << endl;
+                    success = dfs_generate_solution(out_node, seek_odd, solutions[i]);
                 }
             }
             
@@ -513,21 +519,26 @@ int main(int argc, char** argv) {
         }
     }
 
+    cout << "split_num: " << split_num << endl;
     // solve each split
     for(int q = 0 ; q < split_num ; q++){
+        cout << "Processing split " << q << "..." << endl;
         BDD_Solver solver(input_dir + "/split_" + to_string(q) + ".aag", 
                         input_dir + "/solution_" + to_string(q) + ".json", 
                         random_seed, solution_num);
+
 
         if (solver.aag_to_BDD() != 0) {
             cerr << "Error building BDD from AAG file" << endl;
             return 1;
         }
+
         
         if (solver.generate_solutions(solution_num) != 0) {
             cerr << "Error generating solutions" << endl;
             return 1;
         }
+
 
         if (solver.reshape_solutions() != 0) {
             cerr << "Error reshaping solutions" << endl;
@@ -542,9 +553,12 @@ int main(int argc, char** argv) {
                 }
             }
         }
+
+        cout << "Split " << q << " processed successfully." << endl;
     }
+    cout << "All splits processed successfully." << endl;
     // output the final solutions
-    if (output_solutions(final_solutions, output_file, Input_num) != 0) {
+    if (output_solutions(final_solutions, output_file, Variable_num) != 0) {
         cerr << "Error outputting solutions" << endl;
         return 1;
     }
