@@ -232,18 +232,14 @@ public:
 
             line = "module split_" + to_string(s) + "(";
             for(int i = 0 ; i < total_variables ; i++){
-                if(variable_to_set[i] == s){
-                    line += "var_" + to_string(i) + ", ";
-                }
+                line += "var_" + to_string(i) + ", ";
             }
             line += "x);\n";
             outfile << line;
 
             for(int i = 0 ; i < total_variables ; i++){
-                if(variable_to_set[i] == s){
-                    line = variables[i] + "\n";
-                    outfile << line;
-                }
+                line = variables[i] + "\n";
+                outfile << line;
             }
 
             line = "    output wire x;\n\n";
@@ -294,13 +290,7 @@ public:
                 outfile.close();
             }
             else{
-                line = "    assign x = 1 || ";
-                for(int i = 0 ; i < total_variables ; i++){
-                    if(variable_to_set[i] == s){
-                        line += "var_" + to_string(i) + " || ";
-                    }
-                }
-                line = line.substr(0, line.size() - 4) + ";\n";
+                line = "    assign x = 1'b1;\n";
                 outfile << line;
                 outfile << "endmodule\n";
                 outfile.close();

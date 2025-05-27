@@ -83,6 +83,8 @@ class BDD_Solver {
         vector<vector<bool>> solutions;
         vector<vector<vector<bool>>> reshaped_solutions;
 
+        bool no_constraint;
+
         BDD_Solver(const string& input, const string& output, int seed, int num_solutions) 
             : input_file(input), output_file(output), random_seed(seed), solution_num(num_solutions) {
             
@@ -101,6 +103,7 @@ class BDD_Solver {
             output_num = 0;
             and_num = 0;
             ori_input_num = 0;
+            no_constraint = false;
         }
         
         ~BDD_Solver() {
@@ -184,8 +187,14 @@ class BDD_Solver {
             }
 
             // if output is a odd, then an additional inverter is needed
-            out_node = output_idx % 2 == 0 ? nodes[output_idx / 2 - 1] : Cudd_Not(nodes[output_idx / 2 - 1]);
-            Cudd_Ref(out_node);
+            if(!no_constraint){
+                out_node = output_idx % 2 == 0 ? nodes[output_idx / 2 - 1] : Cudd_Not(nodes[output_idx / 2 - 1]);
+                Cudd_Ref(out_node);
+            }
+            else{
+                out_node = Cudd_ReadOne(manager); // if no constraint, output is always true
+            }
+
 
             // names
             for(int i = 0 ; i < input_num ; i++){
@@ -387,85 +396,129 @@ class BDD_Solver {
             return 0;
         }
 
-        string binary_to_hex(const vector<bool>& binary) {
-            if(binary.empty()) {
-                return "0";
-            }
-
-            stringstream ss;
-            // padding 0s to make the length a multiple of 4
-            int len = binary.size();
-            int fill = (4 - len % 4) % 4;
-
-            vector<bool> new_binary = vector<bool>(fill, false);
-            new_binary.insert(new_binary.end(), binary.begin(), binary.end());
-            len += fill;
-
-            // process 4 bits at a time
-                for(int i = 0; i < len; i += 4) {
-                    int value = 0;
-                    for(int j = 0; j < 4 && i+j < len; j++) {
-                        value = (value << 1) | (new_binary[i+j] ? 1 : 0);
-                    }
-                    ss << std::hex << value;
-                }
-                
-                string result = ss.str();
-
-                // remove leading zeros but keep at least one zero
-                size_t start = result.find_first_not_of('0');
-                if (start == string::npos) {
-                    return "0"; 
-                }
-                return result.substr(start);
-        }
-
-        int output_solutions() {
-            reshape_solutions();
-            
-            json j;
-            j["assignment_list"] = json::array();
-
-            for (const auto& solution : reshaped_solutions) {
-                json j_solution = json::array();
-                
-                // sort by the original input variable order
-                for (int var_id = 0; var_id < ori_input_num; var_id++) {
-                    string hex_value = binary_to_hex(solution[var_id]);
-                    j_solution.push_back({{"value", hex_value}});
-                }
-                
-                j["assignment_list"].push_back(j_solution);
-            }
-
-            ofstream out_file(output_file);
-            if (!out_file.is_open()) {
-                cerr << "Error: Failed to open output file: " << output_file << endl;
-                return -1;
-            }
-            
-            out_file << j.dump(4);
-            out_file.close();
-            
-            return 0;
+        vector<vector<vector<bool>>> get_solutions(){
+            return reshaped_solutions;
         }
 };
 
+string binary_to_hex(const vector<bool>& binary) {
+    if(binary.empty()) {
+        return "0";
+    }
+
+    stringstream ss;
+    // padding 0s to make the length a multiple of 4
+    int len = binary.size();
+    int fill = (4 - len % 4) % 4;
+
+    vector<bool> new_binary = vector<bool>(fill, false);
+    new_binary.insert(new_binary.end(), binary.begin(), binary.end());
+    len += fill;
+
+    // process 4 bits at a time
+    for(int i = 0; i < len; i += 4) {
+        int value = 0;
+        for(int j = 0; j < 4 && i+j < len; j++) {
+            value = (value << 1) | (new_binary[i+j] ? 1 : 0);
+        }
+        ss << std::hex << value;
+    }
+                
+        string result = ss.str();
+
+    // remove leading zeros but keep at least one zero
+    size_t start = result.find_first_not_of('0');
+    if (start == string::npos) {
+        return "0"; 
+    }
+    return result.substr(start);
+}
+
+int output_solutions(vector<vector<vector<bool>>>& reshaped_solutions, 
+                     const string& output_file, int ori_input_num) {
+            
+    json j;
+    j["assignment_list"] = json::array();
+
+    for (const auto& solution : reshaped_solutions) {
+        json j_solution = json::array();
+                
+        // sort by the original input variable order
+        for (int var_id = 0; var_id < ori_input_num; var_id++) {
+            string hex_value = binary_to_hex(solution[var_id]);
+            j_solution.push_back({{"value", hex_value}});
+        }
+                
+        j["assignment_list"].push_back(j_solution);
+    }
+
+    ofstream out_file(output_file);
+    if (!out_file.is_open()) {
+        cerr << "Error: Failed to open output file: " << output_file << endl;
+        return -1;
+    }
+            
+    out_file << j.dump(4);
+    out_file.close();
+            
+    return 0;
+}
 
 int main(int argc, char** argv) {
-    if (argc != 5) {
-        cerr << "Usage: " << argv[0] << "<input_file> <random_seed> <solution_num> <output_file>" << endl;
+    if (argc != 6) {
+        cerr << "Usage: " << argv[0] << "<input_dir> <random_seed> <solution_num> <output_file> <split_num>" << endl;
         return 1;
     }
     
-    string input_file = argv[1];
+    string input_dir = argv[1];
     int random_seed = stoi(argv[2]);
     int solution_num = stoi(argv[3]);
     string output_file = argv[4];
-    
-    try {
-        BDD_Solver solver(input_file, output_file, random_seed, solution_num);
-        
+    int split_num = stoi(argv[5]);
+
+    // process the input file to get some information
+    vector<vector<vector<bool>>> final_solutions;
+    int Input_num, Variable_num;
+    string line;
+    vector<int> Variable_len;
+    ifstream infile(input_dir + "/json2verilog.v");
+
+    if (!infile.is_open()) {
+        cerr << "Error opening input file: " << input_dir  << "json2verilog.v"  << endl;
+        return 1;
+    }
+
+    if(getline(infile, line)){
+        int idx1 = line.rfind('_');
+        int idx2 = line.rfind(',');
+        Variable_num = stoi(line.substr(idx1 + 1, idx2 - idx1 - 1)) + 1;
+    }
+    Variable_len.resize(Variable_num, 0);
+
+    for(int i = 0; i < Variable_num; i++) {
+        if(getline(infile, line)) {
+            int idx1 = line.find('[');
+            int idx2 = line.find(':');
+            Variable_len[i] = stoi(line.substr(idx1 + 1, idx2 - idx1 - 1)) + 1;
+            Input_num += Variable_len[i];
+        }
+    }
+    infile.close();
+
+    final_solutions.resize(solution_num);
+    for(int i = 0 ; i < solution_num ; i++){
+        final_solutions[i].resize(Variable_num);
+        for(int j = 0 ; j < Variable_num ; j++){
+            final_solutions[i][j].resize(Variable_len[j], false);
+        }
+    }
+
+    // solve each split
+    for(int q = 0 ; q < split_num ; q++){
+        BDD_Solver solver(input_dir + "/split_" + to_string(q) + ".aag", 
+                        input_dir + "/solution_" + to_string(q) + ".json", 
+                        random_seed, solution_num);
+
         if (solver.aag_to_BDD() != 0) {
             cerr << "Error building BDD from AAG file" << endl;
             return 1;
@@ -475,16 +528,27 @@ int main(int argc, char** argv) {
             cerr << "Error generating solutions" << endl;
             return 1;
         }
-        
-        if (solver.output_solutions() != 0) {
-            cerr << "Error outputting solutions" << endl;
+
+        if (solver.reshape_solutions() != 0) {
+            cerr << "Error reshaping solutions" << endl;
             return 1;
         }
-        
-        cout << "Successfully generated " << solution_num << " solutions" << endl;
-        return 0;
-    } catch (const exception& e) {
-        cerr << "Error: " << e.what() << endl;
+
+        auto solutions = solver.get_solutions();
+        for(int i = 0 ; i < solution_num ; i++){
+            for(int j = 0 ; j < Variable_num ; j++){
+                for(int k = 0 ; k < Variable_len[j] ; k++){
+                    final_solutions[i][j][k] = solutions[i][j][k] || final_solutions[i][j][k];
+                }
+            }
+        }
+    }
+    // output the final solutions
+    if (output_solutions(final_solutions, output_file, Input_num) != 0) {
+        cerr << "Error outputting solutions" << endl;
         return 1;
     }
+
+    cout << "Solutions generated and saved to " << output_file << endl;
+    return 0;
 }

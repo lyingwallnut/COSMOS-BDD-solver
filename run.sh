@@ -78,6 +78,7 @@ techmap
 opt
 aigmap
 opt
+abc -g AND
 write_aiger -symbols -ascii $run_dir/verilog2aag.aag
 exit"
 echo "$YOSYS_SCRIPT" | ./yosys/yosys -q > "$run_dir/yosys.log" 2>&1
