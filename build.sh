@@ -79,7 +79,22 @@ if [ $? -ne 0 ]; then
 fi
 echo "✔ 编译成功: ${JSON2VERILOG_EXEC}"
 
-echo "===== Step 4: 编译 BDD 求解器 ====="
+echo "===== Step 4: 编译 split_verilog ====="
+# 设置编译参数
+SPLIT_VERILOG_SRC="./split_verilog.cpp"
+SPLIT_VERILOG_EXEC="_run/split_verilog"
+SPLIT_VERILOG_FLAGS="-std=c++11 -I./json/include"
+
+echo "编译 split_verilog.cpp..."
+g++ ${SPLIT_VERILOG_FLAGS} -o "${SPLIT_VERILOG_EXEC}" ${SPLIT_VERILOG_SRC}
+
+if [ $? -ne 0 ]; then
+    echo "❌ 编译失败: 无法生成 split_verilog"
+    exit 1
+fi
+echo "✔ 编译成功: ${SPLIT_VERILOG_EXEC}"
+
+echo "===== Step 5: 编译 BDD 求解器 ====="
 # C++编译相关设置
 SRC_DIR="./"
 INCLUDE_DIR="./json/include"
@@ -111,6 +126,7 @@ echo "✔ 编译成功: _run/${EXEC_NAME}"
 echo "===== 所有工具编译完成 ====="
 echo "可执行文件位置:"
 echo "- json2verilog: _run/json2verilog"
+echo "- split_verilog: _run/split_verilog"
 echo "- solution_gen: _run/solution_gen"
 
 exit 0

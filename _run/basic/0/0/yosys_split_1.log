@@ -1,5 +1,5 @@
 
-yosys> read_verilog ./_run/basic/0/0//json2verilog.v
+yosys> read_verilog ./_run/basic/0/0//split_1.v
 
 yosys> hierarchy -check
 
@@ -17,6 +17,6 @@ yosys> opt
 
 yosys> abc -g AND
 
-yosys> write_aiger -symbols -ascii ./_run/basic/0/0//verilog2aag.aag
+yosys> write_aiger -symbols -ascii ./_run/basic/0/0//split_1.aag
 
 yosys> exit
