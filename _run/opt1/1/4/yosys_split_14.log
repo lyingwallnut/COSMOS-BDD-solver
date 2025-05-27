@@ -15,8 +15,6 @@ yosys> aigmap
 
 yosys> opt
 
-yosys> abc -g AND
-
 yosys> write_aiger -symbols -ascii _run/opt1/1/4/split_14.aag
 
 yosys> exit

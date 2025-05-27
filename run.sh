@@ -116,7 +116,6 @@ techmap
 opt
 aigmap
 opt
-abc -g AND
 write_aiger -symbols -ascii $split_aag_file
 exit"
     echo "$YOSYS_SCRIPT_PART" | ./yosys/yosys -q > "$run_dir/yosys_split_${i}.log" 2>&1

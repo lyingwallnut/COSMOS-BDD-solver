@@ -1,95 +1,49 @@
 split_num: 23
 Processing split 0...
-DP calculated for output node.
- Odd paths: 5.51096e+24, Even paths: 5.51096e+24
 Split 0 processed successfully.
 Processing split 1...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 1 processed successfully.
 Processing split 2...
-DP calculated for output node.
- Odd paths: 61608, Even paths: 235
 Split 2 processed successfully.
 Processing split 3...
-DP calculated for output node.
- Odd paths: 1, Even paths: 0
 Split 3 processed successfully.
 Processing split 4...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 4 processed successfully.
 Processing split 5...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 5 processed successfully.
 Processing split 6...
-DP calculated for output node.
- Odd paths: 10240, Even paths: 59248
 Split 6 processed successfully.
 Processing split 7...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 7 processed successfully.
 Processing split 8...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 8 processed successfully.
 Processing split 9...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 9 processed successfully.
 Processing split 10...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 10 processed successfully.
 Processing split 11...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 11 processed successfully.
 Processing split 12...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 12 processed successfully.
 Processing split 13...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 13 processed successfully.
 Processing split 14...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 14 processed successfully.
 Processing split 15...
-DP calculated for output node.
- Odd paths: 0, Even paths: 75
 Split 15 processed successfully.
 Processing split 16...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 16 processed successfully.
 Processing split 17...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 17 processed successfully.
 Processing split 18...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 18 processed successfully.
 Processing split 19...
-DP calculated for output node.
- Odd paths: 0, Even paths: 9
 Split 19 processed successfully.
 Processing split 20...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 20 processed successfully.
 Processing split 21...
-DP calculated for output node.
- Odd paths: 0, Even paths: 1
 Split 21 processed successfully.
 Processing split 22...
-DP calculated for output node.
- Odd paths: 3, Even paths: 3
 Split 22 processed successfully.
 All splits processed successfully.
 Solutions generated and saved to _run/basic/2/5/result.json

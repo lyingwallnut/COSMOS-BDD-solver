@@ -350,15 +350,20 @@ class BDD_Solver {
                 solution.resize(input_num, false);
             }
 
+            if(no_constraint){
+                // if no constraint, then all solutions are false
+                for(int i = 0 ; i < num_solutions ; i++){
+                    for(int j = 0 ; j < input_num ; j++){
+                        solutions[i][j] = false;
+                    }
+                }
+                return 0;
+            }
+
             cal_dp(out_node);
-            char odd_buf[128], even_buf[128];
-            quadmath_snprintf(odd_buf, sizeof(odd_buf), "%.6Qg", dp[out_node].first);
-            quadmath_snprintf(even_buf, sizeof(even_buf), "%.6Qg", dp[out_node].second);
-            cout << "DP calculated for output node." << endl;
-            cout << " Odd paths: " << odd_buf << ", Even paths: " << even_buf << endl;
 
             
-            const int MAX_ATTEMPTS = 100;
+            const int MAX_ATTEMPTS = 10;
             
             for(int i = 0; i < num_solutions; i++) {
                 int attempts = 0;
