@@ -147,6 +147,16 @@ mkdir -p "$REORDERED_AAG_DIR"
 REORDER_AAG_LOG_DIR="$run_dir/reorder_aag_logs"
 mkdir -p "$REORDER_AAG_LOG_DIR"
 
+# 判断是否需要应用重排序
+# 检查约束文件路径是否包含 opt4 或 opt5
+if [[ "$constraint_file" == *"opt4"* ]] || [[ "$constraint_file" == *"opt5"* ]]; then
+    echo "检测到 opt4/opt5 数据集，将应用变量重排序优化"
+    apply_reordering=true
+else
+    echo "非 opt4/opt5 数据集，将直接复制 AAG 文件（跳过重排序）"
+    apply_reordering=false
+fi
+
 for i in $(seq 0 $(($num_split_files - 1))); do
     original_aag_file="$AAG_OUTPUT_DIR/split_${i}.aag"
     reordered_aag_file="$REORDERED_AAG_DIR/reordered_${i}.aag" # 重排后的文件名和路径
@@ -156,30 +166,56 @@ for i in $(seq 0 $(($num_split_files - 1))); do
         exit 1
     fi
 
-    echo "重排 AAG 文件: $original_aag_file → $reordered_aag_file"
-    # 将日志输出到 REORDER_AAG_LOG_DIR
-    python3 ./reorder_aag_std.py "$original_aag_file" "$reordered_aag_file" > "$REORDER_AAG_LOG_DIR/reorder_aag_${i}.log" 2>&1
-    
-    if [ $? -ne 0 ]; then
-        echo "❌ 错误: AAG 文件 $original_aag_file 重排失败。"
-        # 更新日志文件路径的提示
-        echo "详情请查看: $REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
-        # 可以选择是否在这里退出，或者允许继续处理其他文件
-        # exit 1 
-    fi
-
-    if [ ! -f "$reordered_aag_file" ]; then
-        echo "❌ 错误: 重排后的 AAG 文件 $reordered_aag_file 未生成。"
-        # 更新日志文件路径的提示
-        echo "详情请查看: $REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
-        # exit 1
+    if [ "$apply_reordering" = true ]; then
+        # 应用重排序
+        echo "重排 AAG 文件: $original_aag_file → $reordered_aag_file"
+        python3 ./reorder_aag_std.py "$original_aag_file" "$reordered_aag_file"  > "$REORDER_AAG_LOG_DIR/reorder_aag_${i}.log" 2>&1
+        
+        if [ $? -ne 0 ]; then
+            echo "❌ 错误: AAG 文件 $original_aag_file 重排失败。"
+            echo "详情请查看: $REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
+            echo "回退到直接复制模式..."
+            # 重排失败时回退到复制
+            cp "$original_aag_file" "$reordered_aag_file"
+            echo "已将原始文件复制到: $reordered_aag_file"
+        elif [ ! -f "$reordered_aag_file" ]; then
+            echo "❌ 错误: 重排后的 AAG 文件 $reordered_aag_file 未生成。"
+            echo "详情请查看: $REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
+            echo "回退到直接复制模式..."
+            # 重排后文件未生成时回退到复制
+            cp "$original_aag_file" "$reordered_aag_file"
+            echo "已将原始文件复制到: $reordered_aag_file"
+        else
+            echo "✔ 重排完成: $reordered_aag_file"
+        fi
+    else
+        # 直接复制，不进行重排序
+        echo "复制 AAG 文件: $original_aag_file → $reordered_aag_file"
+        cp "$original_aag_file" "$reordered_aag_file"
+        
+        if [ $? -eq 0 ]; then
+            echo "✔ 复制完成: $reordered_aag_file"
+            # 创建一个简单的日志记录复制操作
+            echo "直接复制操作，未进行变量重排序" > "$REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
+        else
+            echo "❌ 错误: 复制 AAG 文件失败"
+            exit 1
+        fi
     fi
 done
 
 # 记录AAG重排结束时间
 reorder_aag_end_time=$(date +%s)
 reorder_aag_runtime=$((reorder_aag_end_time - reorder_aag_start_time))
-echo "✔ 所有原始 AAG 文件已尝试重排 (共 $num_split_files 个)，输出到 $REORDERED_AAG_DIR"
+
+if [ "$apply_reordering" = true ]; then
+    echo "✔ 所有 AAG 文件已完成重排序处理 (共 $num_split_files 个)，输出到 $REORDERED_AAG_DIR"
+    echo "   重排序方法: mincut (单输出BDD优化)"
+else
+    echo "✔ 所有 AAG 文件已复制 (共 $num_split_files 个)，输出到 $REORDERED_AAG_DIR"
+    echo "   操作: 直接复制（未应用重排序）"
+fi
+echo "   处理时间: $reorder_aag_runtime 秒"
 
 
 echo "===== Step 3: 运行 BDD 求解器 ====="

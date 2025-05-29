@@ -232,14 +232,18 @@ public:
 
             line = "module split_" + to_string(s) + "(";
             for(int i = 0 ; i < total_variables ; i++){
-                line += "var_" + to_string(i) + ", ";
+                if(variable_to_set[i] == s){
+                    line += "var_" + to_string(i) + ", ";
+                }
             }
             line += "x);\n";
             outfile << line;
 
             for(int i = 0 ; i < total_variables ; i++){
-                line = variables[i] + "\n";
-                outfile << line;
+                if(variable_to_set[i] == s){
+                    line = "    " + variables[i] + "\n";
+                    outfile << line;
+                }
             }
 
             line = "    output wire x;\n\n";

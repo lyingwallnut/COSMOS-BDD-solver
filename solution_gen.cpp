@@ -69,7 +69,7 @@ class BDD_Solver {
         vector<pair<int, int>> idx_to_name;
 
         // aag config
-        int max_idx, input_num, latch_num, output_num, and_num, ori_input_num;
+        int max_idx, input_num, latch_num, output_num, and_num, ori_var_num;
         vector<int> idx_to_len;// the length of each original input variable
 
         // record path number from current node to 1-th node with odd or even complement arcs
@@ -85,8 +85,8 @@ class BDD_Solver {
 
         bool no_constraint;
 
-        BDD_Solver(const string& input, const string& output, int seed, int num_solutions) 
-            : input_file(input), output_file(output), random_seed(seed), solution_num(num_solutions) {
+        BDD_Solver(const string& input, const string& output, int seed, int num_solutions, int var_num , vector<int> idx_to_len) 
+            : input_file(input), output_file(output), random_seed(seed), solution_num(num_solutions), ori_var_num(var_num), idx_to_len(idx_to_len) {
             
             rng = std::mt19937(random_seed);
             
@@ -102,7 +102,6 @@ class BDD_Solver {
             latch_num = 0;
             output_num = 0;
             and_num = 0;
-            ori_input_num = 0;
             no_constraint = false;
         }
         
@@ -139,9 +138,7 @@ class BDD_Solver {
             }
 
             
-            if(input_num > 100){
-                Cudd_AutodynEnable(manager, CUDD_REORDER_SIFT);
-            }
+            Cudd_AutodynEnable(manager, CUDD_REORDER_SIFT);
             
             // initialize 
             nodes.resize(max_idx);
@@ -203,7 +200,6 @@ class BDD_Solver {
             }
 
 
-
             // names
             for(int i = 0 ; i < input_num ; i++){
                 string head, name;
@@ -224,24 +220,9 @@ class BDD_Solver {
                 if (regex_match(name, match, p2)) {
                     x = stoi(match[1]);
                     y = stoi(match[2]);
-                    ori_input_num = max(ori_input_num, x + 1);
                 }
 
                 idx_to_name[idx] = {x, y};
-            }
-
-
-            // for solution reshape in the last step
-            ori_input_num = max(ori_input_num, 1);// original input number 
-            idx_to_len.resize(ori_input_num, 0);// index to the length of each original input variable
-            
-            // calculate the length of each original input variable
-            for (size_t i = 0; i < idx_to_name.size(); i++) {
-                int x = idx_to_name[i].first;
-                int y = idx_to_name[i].second;
-                if (x < ori_input_num) {
-                    idx_to_len[x] = max(idx_to_len[x], y + 1);
-                }
             }
 
 
@@ -259,8 +240,6 @@ class BDD_Solver {
                 return it->second;
             }
             
-            int idx = Cudd_NodeReadIndex(node);
-            //cout << "Node "<< idx << " not found in dp, calculating..." << endl;
 
             DdNode* regular_node = Cudd_Regular(node);
             DdNode* T = Cudd_T(regular_node);
@@ -391,8 +370,8 @@ class BDD_Solver {
             reshaped_solutions.clear();
             reshaped_solutions.resize(solution_num);
             for(int i = 0 ; i < solution_num; i++){
-                reshaped_solutions[i].resize(ori_input_num);
-                for(int j = 0 ; j < ori_input_num; j++){
+                reshaped_solutions[i].resize(ori_var_num);
+                for(int j = 0 ; j < ori_var_num; j++){
                     reshaped_solutions[i][j].resize(idx_to_len[j], false);
                 }
             }
@@ -446,7 +425,7 @@ string binary_to_hex(const vector<bool>& binary) {
 }
 
 int output_solutions(vector<vector<vector<bool>>>& reshaped_solutions, 
-                     const string& output_file, int ori_input_num) {
+                     const string& output_file, int ori_var_num) {
             
     json j;
     j["assignment_list"] = json::array();
@@ -455,7 +434,7 @@ int output_solutions(vector<vector<vector<bool>>>& reshaped_solutions,
         json j_solution = json::array();
                 
         // sort by the original input variable order
-        for (int var_id = 0; var_id < ori_input_num; var_id++) {
+        for (int var_id = 0; var_id < ori_var_num; var_id++) {
             string hex_value = binary_to_hex(solution[var_id]);
             j_solution.push_back({{"value", hex_value}});
         }
@@ -530,7 +509,7 @@ int main(int argc, char** argv) {
         cout << "Processing split " << q << "..." << endl;
         BDD_Solver solver(input_dir + "/reordered_aags/reordered_" + to_string(q) + ".aag", 
                         input_dir + "/solution_" + to_string(q) + ".json", 
-                        random_seed, solution_num);
+                        random_seed, solution_num, Variable_num, Variable_len);
 
 
         if (solver.aag_to_BDD() != 0) {
