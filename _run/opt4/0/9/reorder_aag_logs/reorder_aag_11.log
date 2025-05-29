@@ -1,0 +1,4 @@
+电路特征: 类型=sparse, 密度=0.000, 平均位宽=23.2, 复杂度=high
+选择策略: 位宽优先排序
+排序计算时间: 0.297 秒
+混合重排序AAG文件已保存到: _run/opt4/0/9/reordered_aags//reordered_11.aag

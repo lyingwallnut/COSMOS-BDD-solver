@@ -1,0 +1,4 @@
+使用SIFT启发式算法...
+SIFT优化完成，迭代次数: 1
+BDD专用排序计算时间: 7.025 秒
+BDD专用排序AAG文件已保存到: _run/opt5/0/0/reordered_aags//reordered_1.aag
