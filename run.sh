@@ -147,14 +147,13 @@ mkdir -p "$REORDERED_AAG_DIR"
 REORDER_AAG_LOG_DIR="$run_dir/reorder_aag_logs"
 mkdir -p "$REORDER_AAG_LOG_DIR"
 
-# 判断是否需要应用重排序
-# 检查约束文件路径是否包含 opt4 或 opt5
-if [[ "$constraint_file" == *"opt4"* ]] || [[ "$constraint_file" == *"opt5"* ]]; then
-    echo "检测到 opt4/opt5 数据集，将应用变量重排序优化"
-    apply_reordering=true
-else
-    echo "非 opt4/opt5 数据集，将直接复制 AAG 文件（跳过重排序）"
+# 检查拆分文件数量，决定是否启用重排
+if [ "$num_split_files" -gt 20 ]; then
+    echo "⚠️ 拆分文件数量 ($num_split_files) 大于 20，跳过重排序优化，直接复制原始文件"
     apply_reordering=false
+else
+    echo "对所有数据集应用变量重排序优化 (拆分文件数: $num_split_files)"
+    apply_reordering=true
 fi
 
 for i in $(seq 0 $(($num_split_files - 1))); do
@@ -189,18 +188,10 @@ for i in $(seq 0 $(($num_split_files - 1))); do
             echo "✔ 重排完成: $reordered_aag_file"
         fi
     else
-        # 直接复制，不进行重排序
+        # 直接复制，不进行重排
         echo "复制 AAG 文件: $original_aag_file → $reordered_aag_file"
         cp "$original_aag_file" "$reordered_aag_file"
-        
-        if [ $? -eq 0 ]; then
-            echo "✔ 复制完成: $reordered_aag_file"
-            # 创建一个简单的日志记录复制操作
-            echo "直接复制操作，未进行变量重排序" > "$REORDER_AAG_LOG_DIR/reorder_aag_${i}.log"
-        else
-            echo "❌ 错误: 复制 AAG 文件失败"
-            exit 1
-        fi
+        echo "✔ 复制完成: $reordered_aag_file"
     fi
 done
 
@@ -213,10 +204,9 @@ if [ "$apply_reordering" = true ]; then
     echo "   重排序方法: mincut (单输出BDD优化)"
 else
     echo "✔ 所有 AAG 文件已复制 (共 $num_split_files 个)，输出到 $REORDERED_AAG_DIR"
-    echo "   操作: 直接复制（未应用重排序）"
+    echo "   处理方式: 直接复制 (跳过重排序)"
 fi
 echo "   处理时间: $reorder_aag_runtime 秒"
-
 
 echo "===== Step 3: 运行 BDD 求解器 ====="
 # 参数准备

@@ -138,7 +138,7 @@ class BDD_Solver {
             }
 
             
-            Cudd_AutodynEnable(manager, CUDD_REORDER_SIFT);
+            if(input_num > 30) Cudd_AutodynEnable(manager, CUDD_REORDER_SIFT);
             
             // initialize 
             nodes.resize(max_idx);
@@ -469,6 +469,7 @@ int main(int argc, char** argv) {
     // process the input file to get some information
     vector<vector<vector<bool>>> final_solutions;
     int Input_num, Variable_num;
+    random_seed = random_seed + 114514;
     string line;
     vector<int> Variable_len;
     ifstream infile(input_dir + "/json2verilog.v");
