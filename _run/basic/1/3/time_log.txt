@@ -1,0 +1,7 @@
+编译时间: 0 秒
+JSON到Verilog转换时间: 0 秒
+Verilog文件拆分时间: 0 秒
+Verilog到AAG转换时间: 3 秒
+AAG文件重排时间: 1 秒
+BDD求解时间: 3 秒
+总运行时间: 7 秒
