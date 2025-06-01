@@ -11,10 +11,9 @@ if [ ! -f "./yosys/yosys" ]; then
     echo "编译 Yosys..."
     if [ -d "yosys" ]; then
         cd yosys
-        echo "Running make config for Yosys..."
-        make config-gcc
         echo "Running make for Yosys..."
         make
+        make install
         cd ..
         echo "✔ Yosys 编译成功"
     else
